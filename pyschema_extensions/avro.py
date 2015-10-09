@@ -198,12 +198,14 @@ class SubRecordMixin:
         if self.nullable:
             return from_json_compatible(
                 self._schema,
-                self._get_record_data(obj)
+                self._get_record_data(obj),
+                from_json_compatible
             )
         else:
             return from_json_compatible(
                 self._schema,
-                obj
+                obj,
+                from_json_compatible
             )
 
 
@@ -308,7 +310,7 @@ def to_json_compatible(record):
     return dct
 
 
-def from_json_compatible(schema, dct):
+def from_json_compatible(schema, dct, loader):
     "Load from json-encodable"
     kwargs = {}
 

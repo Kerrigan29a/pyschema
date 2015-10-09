@@ -35,7 +35,7 @@ def ordereddict_push_front(dct, key, value):
 
 
 class Text(Field):
-    def load(self, obj):
+    def load(self, obj, **kwargs):
         if not isinstance(obj, (unicode, type(None))):
             raise ParseError("%r not a unicode object" % obj)
         return obj
@@ -71,7 +71,7 @@ class Bytes(Field):
     def _dump_b64(self, binary_data):
         return binascii.b2a_base64(binary_data).rstrip('\n')
 
-    def load(self, obj):
+    def load(self, obj, **kwargs):
         if not self.custom_encoding:
             return self._load_utf8_codepoints(obj)
         return self._load_b64(obj)
@@ -100,10 +100,10 @@ class List(Field):
         super(List, self).__init__(nullable=nullable, default=default, **kwargs)
         self.field_type = field_type
 
-    def load(self, obj):
+    def load(self, obj, **kwargs):
         if not isinstance(obj, list):
             raise ParseError("%r is not a list object" % obj)
-        return [self.field_type.load(o) for o in obj]
+        return [self.field_type.load(o, **kwargs) for o in obj]
 
     def dump(self, obj):
         if not isinstance(obj, (tuple, list)):
@@ -146,8 +146,8 @@ class Enum(Field):
                 % (obj, tuple(self.values)))
         return self._field_type.dump(obj)
 
-    def load(self, obj):
-        parsed = self._field_type.load(obj)
+    def load(self, obj, **kwargs):
+        parsed = self._field_type.load(obj, **kwargs)
         if parsed not in self.values and parsed is not None:
             raise ParseError(
                 "Parsed value %r not in allowed value of Enum(%r)"
@@ -175,7 +175,7 @@ class Integer(Field):
             raise ValueError("%r is not a valid Integer" % (obj,))
         return obj
 
-    def load(self, obj):
+    def load(self, obj, **kwargs):
         if not isinstance(obj, (int, long, type(None))) or isinstance(obj, bool):
             raise ParseError("%r is not a valid Integer" % (obj,))
         return obj
@@ -201,7 +201,7 @@ class Boolean(Field):
                 "Invalid value for Boolean field: %r" % obj)
         return bool(obj)
 
-    def load(self, obj):
+    def load(self, obj, **kwargs):
         if obj not in self.VALUE_MAP:
             raise ParseError(
                 "Invalid value for Boolean field: %r" % obj)
@@ -218,7 +218,7 @@ class Float(Field):
             raise ValueError("Invalid value for Float field: %r" % obj)
         return float(obj)
 
-    def load(self, obj):
+    def load(self, obj, **kwargs):
         if not isinstance(obj, (float, int, long)):
             raise ParseError("Invalid value for Float field: %r" % obj)
         return float(obj)
@@ -233,7 +233,7 @@ class Date(Text):
             raise ValueError("Invalid value for Date field: %r" % obj)
         return str(obj)
 
-    def load(self, obj):
+    def load(self, obj, **kwargs):
         try:
             # This is much faster than calling strptime
             (year, month, day) = obj.split('-')
@@ -248,7 +248,7 @@ class DateTime(Text):
             raise ValueError("Invalid value for DateTime field: %r" % obj)
         return str(obj)
 
-    def load(self, obj):
+    def load(self, obj, **kwargs):
         try:
             if '.' in obj:
                 return datetime.datetime.strptime(obj, "%Y-%m-%d %H:%M:%S.%f")
@@ -276,8 +276,8 @@ class SubRecord(Field):
                              % (obj, self._schema))
         return core.to_json_compatible(obj)
 
-    def load(self, obj):
-        return core.from_json_compatible(self._schema, obj)
+    def load(self, obj, loader=core.from_json_compatible, **kwargs):
+        return loader(self._schema, obj, loader=loader, **kwargs)
 
     def set_parent(self, schema):
         """This method gets called by the metaclass
@@ -315,10 +315,10 @@ class Map(Field):
         self.value_type = value_type
         self.key_type = Text()
 
-    def load(self, obj):
+    def load(self, obj, **kwargs):
         return dict([
-            (self.key_type.load(k),
-             self.value_type.load(v))
+            (self.key_type.load(k, **kwargs),
+             self.value_type.load(v, **kwargs))
             for k, v in obj.iteritems()
         ])
 

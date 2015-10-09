@@ -484,19 +484,22 @@ def to_json_compatible(record):
     return d
 
 
-def from_json_compatible(schema, dct):
+def from_json_compatible(schema, dct, loader):
     "Load from json-encodable"
     kwargs = {}
 
-    for key in dct:
-        field_type = schema._fields.get(key)
-        if field_type is None:
-            raise ParseError("Unexpected field encountered in line for record %s: %s" % (schema.__name__, key))
-        kwargs[key] = field_type.load(dct[key])
-
-    return schema(**kwargs)
-
-
+    for cls in [schema] + schema.__subclasses__():
+        for key in dct:
+            field_type = cls._fields.get(key)
+            if field_type is None:
+                raise ParseError("Unexpected field encountered in line for record %s: %s" % (schema.__name__, key))
+            kwargs[key] = field_type.load(dct[key], loader=loader)
+        try:
+            return cls(**kwargs)
+        except ParseError:
+            pass
+            
+        
 def ispyschema(schema):
     """ Is object PySchema instance?
 
@@ -557,7 +560,7 @@ def load_json_dct(
     elif SCHEMA_FIELD_NAME in dct:
         dct.pop(SCHEMA_FIELD_NAME)
 
-    record = loader(schema, dct)
+    record = loader(schema, dct, loader)
     return record
 
 
