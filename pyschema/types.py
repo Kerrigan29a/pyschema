@@ -277,7 +277,11 @@ class SubRecord(Field):
         return core.to_json_compatible(obj)
 
     def load(self, obj, loader=core.from_json_compatible, **kwargs):
-        return loader(self._schema, obj, loader=loader)
+        for cls in [self._schema] + self._schema.__subclasses__():
+            try:
+                return loader(cls, obj, loader=loader)
+            except ParseError:
+                pass
 
     def set_parent(self, schema):
         """This method gets called by the metaclass

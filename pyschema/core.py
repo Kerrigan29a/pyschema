@@ -488,16 +488,12 @@ def from_json_compatible(schema, dct, loader):
     "Load from json-encodable"
     kwargs = {}
 
-    for cls in [schema] + schema.__subclasses__():
-        for key in dct:
-            field_type = cls._fields.get(key)
-            if field_type is None:
-                raise ParseError("Unexpected field encountered in line for record %s: %s" % (schema.__name__, key))
-            kwargs[key] = field_type.load(dct[key], loader=loader)
-        try:
-            return cls(**kwargs)
-        except ParseError:
-            pass
+    for key in dct:
+        field_type = schema._fields.get(key)
+        if field_type is None:
+            raise ParseError("Unexpected field encountered in line for record %s: %s" % (schema.__name__, key))
+        kwargs[key] = field_type.load(dct[key], loader=loader)
+    return schema(**kwargs)
             
         
 def ispyschema(schema):
